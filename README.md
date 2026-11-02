@@ -1,5 +1,7 @@
 # magpie-obelisk-usage
 
+<p align="center"><img src="assets/hero.png" alt="Obelisk usage — a magpie page showing how often your coding agents call obelisk" width="860"></p>
+
 A [magpie](https://usemagpie.ai) sidebar page that shows how often your coding agents call [obelisk](https://github.com/tommy0103/obelisk) — only call volume, in magpie's native look.
 
 - **Heatmap** of calls per day, switching to hourly bars when you pick "today"
