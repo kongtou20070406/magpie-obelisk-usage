@@ -19,6 +19,16 @@ Then open **Obelisk usage** in magpie's sidebar. The first numbers appear within
 
 Update with `magpie plugin update`, remove with `magpie plugin rm`.
 
+## What is obelisk?
+
+[**obelisk**](https://github.com/tommy0103/obelisk) by [@tommy0103](https://github.com/tommy0103) indexes the session history of your local coding agents — Claude Code, Codex, Kiro and more — into a single SQLite database: *queryable by your agent, browsable by you*. Your agent runs `obelisk --query <script>` to search what you did before and `obelisk --attune <script>` to keep conclusions as memories, so work done in one session is not lost in the next. It has a desktop app for browsing too.
+
+```bash
+npm install --global @obelisk-apps/cli && obelisk install
+```
+
+If you use coding agents every day, it is worth a star and a try. This plugin is an unofficial companion and is not affiliated with obelisk.
+
 ## Requirements
 
 - obelisk has run at least once, so `~/.obelisk/obelisk.sqlite` exists.
