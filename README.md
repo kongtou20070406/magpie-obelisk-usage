@@ -1,6 +1,13 @@
 # magpie-obelisk-usage
 
-A [magpie](https://usemagpie.ai) page plugin that shows how often your agents call [obelisk](https://github.com/tommy0103/obelisk): a daily heatmap, per-agent breakdown, `--query` vs `--attune` share, and recent calls. Time granularity adapts to the range (today → hourly).
+A [magpie](https://usemagpie.ai) sidebar page that shows how often your coding agents call [obelisk](https://github.com/tommy0103/obelisk) — only call volume, in magpie's native look.
+
+- **Heatmap** of calls per day, switching to hourly bars when you pick "today"
+- **By agent**: which agent (Claude Code, Codex, …) made the calls
+- **`--query` vs `--attune`** share
+- **Recent calls** list
+
+Everything is computed locally from obelisk's own database. The page has no network access and asks magpie for no permissions.
 
 ## Install
 
@@ -8,16 +15,38 @@ A [magpie](https://usemagpie.ai) page plugin that shows how often your agents ca
 magpie plugin add github:kongtou20070406/magpie-obelisk-usage
 ```
 
+Then open **Obelisk usage** in magpie's sidebar. The first numbers appear within ~30 seconds of the plugin starting.
+
+Update with `magpie plugin update`, remove with `magpie plugin rm`.
+
+## Requirements
+
+- obelisk has run at least once, so `~/.obelisk/obelisk.sqlite` exists.
+- magpie (its plugin host runs on Bun). The standalone CLI below also runs on Node 22.13+.
+
 ## How it works
 
-- Reads `~/.obelisk/obelisk.sqlite` **read-only** (`tool_calls` joined to `messages` and `sessions`); a call is a tool call whose input matches `obelisk … --query` or `--attune`.
-- A host hook runs the bundled CLI every 30 s and writes `page/live.js`; the page reloads it every 5 s. Nothing leaves your machine and the page requests no magpie permissions.
-- Requires Node 22+ or Bun (for `node:sqlite` / `bun:sqlite`).
+| Piece | What it does |
+|---|---|
+| Host hook | Every 30 s runs the CLI, which reads the database **read-only** and writes `page/live.js` |
+| Page | Reloads `live.js` every 5 s and draws the charts |
+
+A "call" is a row in obelisk's `tool_calls` whose input contains `obelisk … --query` or `--attune`; its time comes from `messages`, its agent from `sessions.source`. Rows without a timestamp count toward totals but are not placed on the charts.
+
+### Standalone CLI
+
+```bash
+node bin/obelisk-usage.mjs [--db PATH] [--out PATH]
+```
+
+Prints a one-line summary (total, query, attune, undated) and writes the data file.
 
 ## Develop
 
 ```bash
-node --test tests/*.test.mjs
+npm test
 ```
 
-MIT licensed.
+## License
+
+MIT
