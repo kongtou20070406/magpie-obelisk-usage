@@ -24,16 +24,16 @@
     const size = days === 1 ? HOUR : days === 7 ? 6 * HOUR : DAY;
     const rows = Array.from({ length: days * DAY / size }, (_, i) => ({
       start: start + i * size, end: start + (i + 1) * size,
-      query: 0, attune: 0, total: 0, by: Object.create(null), byKind: { query: Object.create(null), attune: Object.create(null) }
+      query: 0, attune: 0, search: 0, total: 0, by: Object.create(null), byKind: { query: Object.create(null), attune: Object.create(null), search: Object.create(null) }
     }));
     for (const row of array(local ? data.recentHours : data.daily)) {
       const time = Date.parse(local ? row.t : `${row.date}T00:00:00Z`);
       if (!Number.isFinite(time)) continue;
       const index = Math.floor(((local ? wall(time) : time) - start) / size);
       if (index >= 0 && index < rows.length) {
-        for (const key of ['query', 'attune', 'total']) rows[index][key] += count(row[key]);
+        for (const key of ['query', 'attune', 'search', 'total']) rows[index][key] += count(row[key]);
         mergeCounts(rows[index].by, row.by);
-        for (const kind of ['query', 'attune']) mergeCounts(rows[index].byKind[kind], row.byKind && row.byKind[kind]);
+        for (const kind of ['query', 'attune', 'search']) mergeCounts(rows[index].byKind[kind], row.byKind && row.byKind[kind]);
       }
     }
     for (const row of rows) {
@@ -54,8 +54,8 @@
     const byMonth = new Map();
     for (const row of daily) {
       const month = row.date.slice(0, 7);
-      const sum = byMonth.get(month) || { query: 0, attune: 0, total: 0 };
-      for (const key of ['query', 'attune', 'total']) sum[key] += count(row[key]);
+      const sum = byMonth.get(month) || { query: 0, attune: 0, search: 0, total: 0 };
+      for (const key of ['query', 'attune', 'search', 'total']) sum[key] += count(row[key]);
       byMonth.set(month, sum);
     }
     return array(data.monthly).filter(row => count(row.total)).map(row => {
@@ -64,7 +64,7 @@
       const sum = byMonth.get(row.month);
       const complete = sum && sum.total === row.total;
       return { ...row, label: row.month, start, end: Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1),
-        query: row.query ?? (complete ? sum.query : null), attune: row.attune ?? (complete ? sum.attune : null) };
+        query: row.query ?? (complete ? sum.query : null), attune: row.attune ?? (complete ? sum.attune : null), search: row.search ?? (complete ? sum.search : null) };
     });
   }
   function element(doc, tag, className, text) {
@@ -101,7 +101,7 @@
     rows.forEach(row => {
       const slot = element(doc, 'div', `column-slot${row.separator ? ' day-start' : ''}`);
       const value = key => row[key] == null ? '无分项数据' : number(row[key]);
-      slot.title = `${stamp(row.start)} 至 ${stamp(row.end)}（结束不含） · ${tz}\nquery ${value('query')} · attune ${value('attune')} · 总计 ${value('total')}${row.future ? ' · 未发生' : ''}`;
+      slot.title = `${stamp(row.start)} 至 ${stamp(row.end)}（结束不含） · ${tz}\nquery ${value('query')} · attune ${value('attune')} · search ${value('search')} · 总计 ${value('total')}${row.future ? ' · 未发生' : ''}`;
       slot.setAttribute('aria-label', slot.title);
       const bar = element(doc, 'span', `column${row.current ? ' current' : ''}${row.future ? ' future' : ''}`);
       bar.style.height = `${max ? count(row[key]) / max * 100 : 0}%`;
@@ -142,7 +142,7 @@
   }
   function seriesColor(source) {
     const name = String(source ?? 'unknown');
-    const fixed = { codex: 0, query: 0, claude: 1, omp: 2, attune: 3, deepseek: 6, 'codexhost-antigravity': 7 };
+    const fixed = { codex: 0, query: 0, claude: 1, omp: 2, attune: 3, search: 5, deepseek: 6, 'codexhost-antigravity': 7 };
     if (name === 'unknown') return 'var(--series-unknown)';
     if (Object.hasOwn(fixed, name)) return `var(--series-${fixed[name]})`;
     let hash = 2166136261;
@@ -220,7 +220,7 @@
     return tabs;
   }
   function series(row, kind, split) {
-    if (split === 'type') return Object.fromEntries(['query', 'attune'].filter(k => kind === 'total' || kind === k).map(k => [k, count(row[k])]));
+    if (split === 'type') return Object.fromEntries(['query', 'attune', 'search'].filter(k => kind === 'total' || kind === k).map(k => [k, count(row[k])]));
     return kind === 'total' ? row.by || {} : (row.byKind && row.byKind[kind]) || {};
   }
   function tipContent(doc, tip, label, values, total, future) {
@@ -282,7 +282,7 @@
     };
     rows.forEach((row, index) => {
       const slot = element(doc, 'div', `column-slot${row.separator ? ' day-start' : ''}`);
-      slot.title = `${stamp(row.start)} 至 ${stamp(row.end)} · ${zone}\nquery ${number(row.query)} · attune ${number(row.attune)} · 总计 ${number(row.total)}${row.future ? ' · 未发生' : ''}`;
+      slot.title = `${stamp(row.start)} 至 ${stamp(row.end)} · ${zone}\nquery ${number(row.query)} · attune ${number(row.attune)} · search ${number(row.search)} · 总计 ${number(row.total)}${row.future ? ' · 未发生' : ''}`;
       slot.setAttribute('tabindex', '0');
       slot.setAttribute('aria-label', slot.title);
       const column = element(doc, 'div', `stack-column${row.current ? ' current' : ''}${row.future ? ' future' : ''}${!row[state.kind] ? ' zero' : ''}`);
@@ -340,10 +340,11 @@
     const aside = element(doc, 'aside', 'trend-details');
     const totals = names.map(name => ({ name, total: values.reduce((s, v) => s + count(v[name]), 0),
       query: rows.reduce((s, r) => s + count(series(r, 'query', state.split)[name]), 0),
-      attune: rows.reduce((s, r) => s + count(series(r, 'attune', state.split)[name]), 0) })).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+      attune: rows.reduce((s, r) => s + count(series(r, 'attune', state.split)[name]), 0),
+      search: rows.reduce((s, r) => s + count(series(r, 'search', state.split)[name]), 0) })).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
     const sum = totals.reduce((s, r) => s + r.total, 0);
     const displayed = totals.slice(0, 8);
-    if (totals.length > 8) displayed.push(totals.slice(8).reduce((s, r) => ({ name: '其他', total: s.total + r.total, query: s.query + r.query, attune: s.attune + r.attune }), { total: 0, query: 0, attune: 0 }));
+    if (totals.length > 8) displayed.push(totals.slice(8).reduce((s, r) => ({ name: '其他', total: s.total + r.total, query: s.query + r.query, attune: s.attune + r.attune, search: s.search + r.search }), { total: 0, query: 0, attune: 0, search: 0 }));
     for (const row of displayed) {
       const item = element(doc, 'div', 'detail-row');
       const head = element(doc, 'div', 'tip-row');
@@ -357,7 +358,7 @@
       fill.style.width = `${percent}%`;
       fill.style.background = sourceColor(row.name);
       track.append(fill);
-      item.append(head, track, element(doc, 'p', 'muted', `query ${row.query} · attune ${row.attune} · 占比 ${percent.toFixed(1)}%`));
+      item.append(head, track, element(doc, 'p', 'muted', `query ${row.query} · attune ${row.attune} · search ${row.search} · 占比 ${percent.toFixed(1)}%`));
       aside.append(item);
     }
     if (!totals.length) empty(doc, aside);
@@ -411,7 +412,7 @@
     hint.title = '每日汇总按 UTC 日历日计算';
     hint.setAttribute('aria-label', '每日汇总按 UTC 日历日计算');
     card.firstChild.firstChild.children[1].append(hint);
-    card.firstChild.append(choices(doc, state, 'heatKind', [['total', '总计'], ['query', 'query'], ['attune', 'attune']], rerender));
+    card.firstChild.append(choices(doc, state, 'heatKind', [['total', '总计'], ['query', 'query'], ['attune', 'attune'], ['search', 'search']], rerender));
     const end = Math.floor(now / DAY) * DAY;
     const start = end - ((new Date(end).getUTCDay() + 6) % 7 + 52 * 7) * DAY;
     const weeks = Array.from({ length: 53 }, (_, w) => `${new Date(start + w * 7 * DAY).getUTCMonth() + 1}月`);
@@ -491,6 +492,7 @@
     const total = all ? count(data.total) : daily.reduce((sum, row) => sum + count(row.total), 0);
     const query = all ? count(data.queryCount) : daily.reduce((sum, row) => sum + count(row.query), 0);
     const attune = all ? count(data.attuneCount) : daily.reduce((sum, row) => sum + count(row.attune), 0);
+    const searchTotal = all ? count(data.searchCount) : daily.reduce((sum, row) => sum + count(row.search), 0);
     const active = all ? count(data.activeDays) : today ? daily.filter(row => count(row.total)).length
       : new Set(daily.filter(row => count(row.total)).map(row => Math.floor(row.start / DAY))).size;
     const dated = all ? array(data.monthly).reduce((sum, row) => sum + count(row.total), 0) : total;
@@ -502,7 +504,7 @@
     stats.setAttribute('aria-label', '调用指标');
     for (const [value, label, note] of [
       [number(total), '总调用', all ? `含 ${number(data.undated)} 条无日期` : today ? '今天' : `近 ${state.days} 天`],
-      [number(query), 'query', '检索与查询'], [number(attune), 'attune', '上下文调谐'],
+      [number(query), 'query', '检索与查询'], [number(attune), 'attune', '上下文调谐'], [number(searchTotal), 'search', '全文搜索'],
       [number(today ? elapsedHours ? total / elapsedHours : 0 : active ? dated / active : 0), today ? '每小时均值' : '日均调用', today ? '按已过去小时' : '按活跃天'],
       [number(data.peak && data.peak.total), '最忙一天', data.peak ? data.peak.date : '全部时间'],
       [number(active), today ? '活跃小时数' : '活跃天数', today ? '范围内有调用的小时' : '范围内有调用的日期']
@@ -515,7 +517,7 @@
     const trend = panel(doc, root, '调用趋势', grain);
     trend.className += ' trend-panel';
     const tools = element(doc, 'div', 'trend-tools');
-    tools.append(choices(doc, state, 'kind', [['total', '总计'], ['query', 'query'], ['attune', 'attune']], rerender),
+    tools.append(choices(doc, state, 'kind', [['total', '总计'], ['query', 'query'], ['attune', 'attune'], ['search', 'search']], rerender),
       choices(doc, state, 'chart', [['bar', '柱状'], ['line', '折线']], rerender),
       choices(doc, state, 'split', [['source', '来源'], ['type', '类型']], rerender));
     trend.append(tools);
@@ -589,7 +591,7 @@
       command.title = row.cmd || '—';
       const time = element(doc, 'time', 'relative', relative(row.ts, now));
       time.title = row.ts;
-      const kind = element(doc, 'span', row.kind === 'attune' ? 'kind attune' : 'kind', row.kind || 'query');
+      const kind = element(doc, 'span', row.kind === 'attune' ? 'kind attune' : row.kind === 'search' ? 'kind search' : 'kind', row.kind || 'query');
       item.append(source, command, time, kind);
       list.append(item);
     }

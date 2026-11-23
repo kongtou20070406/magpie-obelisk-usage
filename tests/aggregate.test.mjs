@@ -26,8 +26,8 @@ test('daily window', () => {
   assert.equal(a.daily.length, 365);
   assert.equal(a.daily.at(-1).date, '2026-11-01');
   assert.equal(a.daily[0].date, '2025-11-02');
-  assert.deepEqual(core(a.daily.at(-1)), { date: '2026-11-01', query: 1, attune: 1, total: 2 });
-  assert.deepEqual(core(a.daily.at(-2)), { date: '2026-10-31', query: 1, attune: 0, total: 1 });
+  assert.deepEqual(core(a.daily.at(-1)), { date: '2026-11-01', query: 1, attune: 1, search: 0, total: 2 });
+  assert.deepEqual(core(a.daily.at(-2)), { date: '2026-10-31', query: 1, attune: 0, search: 0, total: 1 });
 });
 
 test('monthly includes out-of-window dated rows', () => {
@@ -66,4 +66,20 @@ test('recent capped at 30 and empty input', () => {
   assert.equal(e.total, 0);
   assert.equal(e.daily.length, 365);
   assert.deepEqual(e.recent, []);
+});
+
+test('search is its own kind', () => {
+  const a = aggregate([
+    { id: 's1', ts: '2026-11-01T03:00:00Z', source: 'antigravity', name: 'run_command', kind: 'search', cmd: "obelisk --search 'x'" },
+    { id: 's2', ts: '2026-11-01T03:30:00Z', source: 'antigravity', name: 'run_command', kind: 'query', cmd: 'obelisk --query a.mjs' },
+  ], now);
+  assert.equal(a.searchCount, 1);
+  assert.equal(a.queryCount, 1);
+  assert.equal(a.attuneCount, 0);
+  assert.equal(a.total, 2);
+  const day = a.daily.at(-1);
+  assert.deepEqual(core(day), { date: '2026-11-01', query: 1, attune: 0, search: 1, total: 2 });
+  assert.deepEqual({ ...day.byKind.search }, { antigravity: 1 });
+  assert.equal(a.monthly.at(-1).search, 1);
+  assert.equal(a.recentHours.at(-10).search, 1);
 });

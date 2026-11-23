@@ -17,7 +17,7 @@ try {
     else outFile = args[++i];
   }
   const data = writeLive(dbPath, outFile);
-  console.log(`Obelisk usage: total=${data.total} query=${data.queryCount} attune=${data.attuneCount} undated=${data.undated}; out=${outFile}`);
+  console.log(`Obelisk usage: total=${data.total} query=${data.queryCount} attune=${data.attuneCount} search=${data.searchCount} undated=${data.undated}; out=${outFile}`);
 } catch (error) {
   console.error(`Obelisk usage: ${error.message}`);
   process.exitCode = 1;

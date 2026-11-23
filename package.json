@@ -2,7 +2,7 @@
   "name": "@magpie-community/page-obelisk-usage",
   "version": "0.1.0",
   "type": "module",
-  "description": "Obelisk call-volume dashboard: how often agents invoked obelisk --query / --attune.",
+  "description": "Obelisk call-volume dashboard: how often agents invoked obelisk --query / --attune / --search.",
   "license": "MIT",
   "files": ["page", "lib", "bin", "obelisk-usage.hooks.mjs", "README.md"],
   "scripts": { "test": "node --test tests/*.test.mjs" },

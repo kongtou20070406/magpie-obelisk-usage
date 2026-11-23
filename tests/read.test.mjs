@@ -18,7 +18,8 @@ function mk() {
     INSERT INTO tool_calls VALUES('t1','m1','s1','exec','{"cmd":["obelisk","--query","a.mjs"]}');
     INSERT INTO tool_calls VALUES('t2','m1','s1','bash','{"command":"obelisk  --attune   x.mjs"}');
     INSERT INTO tool_calls VALUES('t3','zz','nope','bash','obelisk --query raw');
-    INSERT INTO tool_calls VALUES('t4','m1','s1','bash','{"command":"ls"}');`);
+    INSERT INTO tool_calls VALUES('t4','m1','s1','bash','{"command":"ls"}');
+    INSERT INTO tool_calls VALUES('t5','m1','s1','run_command','{"CommandLine":"obelisk --search ''x'' --nonce n1"}');`);
   db.close();
   return { d, p };
 }
@@ -26,12 +27,14 @@ function mk() {
 test('readRows', () => {
   const { p } = mk();
   const r = readRows(p).sort((a, b) => a.id.localeCompare(b.id));
-  assert.equal(r.length, 3);
+  assert.equal(r.length, 4);
   assert.deepEqual(r[0], { id: 't1', ts: '2026-10-30T10:00:00Z', source: 'codex', name: 'exec', kind: 'query', cmd: 'obelisk --query a.mjs' });
   assert.equal(r[1].kind, 'attune');
   assert.equal(r[1].cmd, 'obelisk --attune x.mjs');
   assert.equal(r[2].ts, null);
   assert.equal(r[2].source, null);
+  assert.equal(r[3].kind, 'search');
+  assert.equal(r[3].cmd, `obelisk --search 'x' --nonce n1`);
   assert.equal(r[2].cmd, 'obelisk --query raw');
 });
 
@@ -49,6 +52,6 @@ test('writeLive', () => {
   const s = fs.readFileSync(o, 'utf8');
   assert.ok(s.startsWith('window.OBELISK_USAGE = '));
   const j = JSON.parse(s.replace(/^window\.OBELISK_USAGE = /, '').replace(/;\s*$/, ''));
-  assert.equal(j.total, 3);
+  assert.equal(j.total, 4);
   assert.deepEqual(fs.readdirSync(d).filter((f) => f.includes('.tmp')), []);
 });

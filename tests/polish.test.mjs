@@ -36,6 +36,6 @@ test('default chart is stacked bars; heat sizing, months, source and metric note
   const source = cls(root, 'panel').find(panel => panel.firstChild.firstChild.firstChild.textContent === '调用来源');
   assert.equal(source.firstChild.firstChild.children[1].textContent, '近 30 天 · UTC');
   const notes = cls(root, 'metric-note').map(note => note.textContent);
-  assert.equal(notes.length, 6);
+  assert.equal(notes.length, 7);
   assert.ok(notes.every(note => !note.includes('\n') && note.length <= 16));
 });
